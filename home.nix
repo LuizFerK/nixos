@@ -7,13 +7,13 @@
 
   home.stateVersion = "23.11";
 
-  home.persistence."/persist/home" = {
-    directories = [
-      "Downloads"
-      "Pictures"
-      "Documents"
-      ".ssh"
-    ];
-    allowOther = true;
-  };
+  # home.persistence."/persist/home" = {
+  #   directories = [
+  #     "Downloads"
+  #     "Pictures"
+  #     "Documents"
+  #     ".ssh"
+  #   ];
+  #   allowOther = true;
+  # };
 }
