@@ -1,24 +1,30 @@
-# Edit this configuration file to define what should be installed on
-# your system. Help is available in the configuration.nix(5) man page, on
-# https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
-
 { config, lib, pkgs, inputs, ... }:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [
+    ./hardware-configuration.nix
+  ];
 
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  # Grub
+  boot.loader = {
+    efi.canTouchEfiVariables = true;
+    grub = {
+      enable = true;
+      efiSupport = true;
+      device = "nodev";
+      useOSProber = true;
+    };
+  };
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+  # Network
+  networking.hostName = "nixos";
+  networking.networkmanager.enable = true;
+
+  # Users
   users.users.luiz = {
     isNormalUser = true;
     initialPassword = "1";
-    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "networkmanager" "wheel" ];
     packages = with pkgs; [
       firefox
       git
@@ -26,6 +32,58 @@
     ];
   };
 
+  security.sudo.wheelNeedsPassword = false;
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nixpkgs.config.allowUnfree = true;
+
+  # Home manager
+  programs.fuse.userAllowOther = true;
+  home-manager = {
+    extraSpecialArgs = {inherit inputs;};
+    users = {
+      luiz = import ./home.nix;
+    };
+  };
+
+  # Hyprland
+  programs.hyprland = {
+    enable = true;
+    xwayland.enable = true;
+  };
+
+  services.xserver = {
+    enable = true;
+    videoDrivers = ["nvidia"];
+    xkb = {
+      layout = "us";
+      Variant = "intl";
+    };
+    displayManager = {
+      autoLogin.user = "luiz";
+      gdm = {
+        enable = true;
+        wayland = true;
+      };
+    };
+    exportConfiguration = true;
+  };
+
+  # Hardware stuff
+  hardware = {
+    opengl = {
+      enable = true;
+      driSupport = true;
+      driSupport32Bit = true;
+    };
+    nvidia = {
+      modesetting.enable = true;
+      open = false;
+      nvidiaSettings = true;
+      package = config.boot.kernelPackages.nvidiaPackages.beta;
+    };
+  };
+
+  # Wipe off root filesystem on reboot
   boot.initrd.postDeviceCommands = lib.mkAfter ''
     mkdir /btrfs_tmp
     mount /dev/root_vg/root /btrfs_tmp
@@ -51,6 +109,7 @@
     umount /btrfs_tmp
   '';
 
+  # Impermanence
   # fileSystems."/persist".neededForBoot = true;
   # environment.persistence."/persist/system" = {
   #   hideMounts = true;
@@ -63,19 +122,6 @@
   #     "/etc/NetworkManager/system-connections"
   #   ];
   # };
-
-  programs.fuse.userAllowOther = true;
-  home-manager = {
-    extraSpecialArgs = {inherit inputs;};
-    users = {
-      luiz = import ./home.nix;
-    };
-  };
-
-  networking.hostName = "nixos"; # Define your hostname.
-  # Pick only one of the below networking options.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
-  networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
 
   # Set your time zone.
   # time.timeZone = "Europe/Amsterdam";
@@ -91,15 +137,6 @@
   #   keyMap = "us";
   #   useXkbConfig = true; # use xkb.options in tty.
   # };
-
-  # Enable the X11 windowing system.
-  services.xserver.enable = true;
-
-
-  # Enable the Plasma 5 Desktop Environment.
-  services.xserver.displayManager.sddm.enable = true;
-  services.xserver.desktopManager.plasma5.enable = true;
-  
 
   # Configure keymap in X11
   # services.xserver.xkb.layout = "us";
@@ -163,5 +200,4 @@
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
   system.stateVersion = "23.11"; # Did you read the comment?
-
 }
